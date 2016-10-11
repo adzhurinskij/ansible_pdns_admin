@@ -1,0 +1,13 @@
+[Unit]
+Description="Gunicorn upstart script for pdnsadmin"
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/PowerDNS-Admin/
+Environment="PATH=/opt/PowerDNS-Admin/env/bin"
+ExecStart=/opt/PowerDNS-Admin/env/bin/gunicorn --workers 4 --bind 127.0.0.1:8000 run:app
+
+[Install]
+WantedBy=multi-user.target

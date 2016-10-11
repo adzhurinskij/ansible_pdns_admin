@@ -1,0 +1,16 @@
+---
+mysql_root_password: "urooTowi2shai1iu"
+mysql_replication_user: { name: "replica", host: "%", password: "secure_password", priv: "*.*:REPLICATION SLAVE"}
+
+pdns_api_key: "aiHoobeeghoo8eeCiwe2uQuah8eecoh5"
+
+pdns_db_name: "pdns"
+pdns_db_user: "pdns"
+pdns_db_password: "aT9Mee9jaiGeesah"
+
+pdns_admin_secret_key: "nieNaa5Feehoh3tuz6eeVieVohwahjae"
+
+pdns_admin_db_name: "powerdnsadmin"
+pdns_admin_db_user: "powerdnsadmin"
+pdns_admin_db_password: "heinaivevu3zeeNg"
+

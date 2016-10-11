@@ -1,0 +1,8 @@
+---
+- src: jdauphant.nginx
+- src: jdauphant.ssl-certs
+- src: geerlingguy.mysql
+- src: azavea.gunicorn
+- src: azavea.pip
+- src: https://github.com/PowerDNS/pdns-ansible
+- src: https://github.com/PowerDNS/pdns_recursor-ansible

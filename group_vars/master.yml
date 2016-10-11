@@ -1,0 +1,3 @@
+---
+mysql_server_id: "1"
+mysql_replication_role: "master"

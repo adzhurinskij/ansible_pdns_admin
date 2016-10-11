@@ -1,0 +1,90 @@
+---
+
+- hosts:
+    - master
+    - slave
+  remote_user: root
+  become: yes
+
+  roles:
+    - role: geerlingguy.mysql
+    - role: pdns_recursor-ansible
+    - role: pdns-ansible
+    - role: PowerDNS_Admin
+    - role: jdauphant.ssl-certs
+    - role: jdauphant.nginx
+
+  vars:
+    pdns_config:
+      master: true
+      recursor: "127.0.0.1:5300"
+      api: "yes"
+      api-key: "{{ pdns_api_key }}"
+      webserver: "yes"
+    pdns_backends:
+      gmysql:
+        host: "localhost"
+        port: "3306"
+        user: "{{ pdns_db_user }}"
+        password: "{{ pdns_db_password }}"
+        dbname: "{{ pdns_db_name }}"
+    pdns_repo_provider: 'powerdns'
+    pdns_repo_branch: 'master'
+
+    pdns_rec_config:
+      'allow-from': '127.0.0.1/8'
+      'local-address': '127.0.0.1:5300'
+
+    mysql_skip_name_resolve: yes
+
+    mysql_max_binlog_size: "100M"
+    mysql_binlog_format: "ROW"
+    mysql_expire_logs_days: "10"
+    mysql_replication_master: '10.0.0.10'
+
+    mysql_databases:
+      - name: "{{ pdns_db_name }}"
+        encoding: utf8
+        collation: utf8_general_ci
+        replicate: 1
+
+      - name: "{{ pdns_admin_db_name}}"
+        encoding: utf8
+        collation: utf8_general_ci
+        replicate: 1
+    
+    mysql_users:
+      - name: "{{ pdns_db_user }}"
+        host: "localhost"
+        password: "{{ pdns_db_password }}"
+        priv: "{{ pdns_db_name }}.*:ALL"
+
+      - name: "{{ pdns_admin_db_user }}"
+        host: "localhost"
+        password: "{{ pdns_admin_db_password }}"
+        priv: "{{ pdns_admin_db_name }}.*:ALL"
+
+    ssl_certs_generate_dh_param: true
+    ssl_certs_country: "RU"
+    ssl_certs_locality: "Saint Petersburg"
+    ssl_certs_organization: "name of your organization"
+    ssl_certs_state: "Saint Petersburg"
+
+    nginx_configs:
+      ssl:
+        - ssl_certificate_key {{ssl_certs_privkey_path}}
+        - ssl_certificate     {{ssl_certs_cert_path}}
+        - ssl_dhparam         {{ssl_certs_dhparam_path}}
+      proxy:
+        - proxy_set_header X-Real-IP  $remote_addr
+        - proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for
+
+    nginx_sites:
+      default:
+        - listen 443 ssl
+        - server_name _
+        - root "/usr/share/nginx/html"
+        - |
+            location / {
+                proxy_pass http://127.0.0.1:8000;
+            }

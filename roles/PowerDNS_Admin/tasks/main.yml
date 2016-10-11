@@ -1,0 +1,102 @@
+---
+
+- name: Install requirements
+  apt: name={{item}} state=present update_cache=yes
+  with_items:
+    - libmysqlclient-dev
+    - python-virtualenv
+    - libsasl2-dev
+    - libldap2-dev
+    - python-dev
+    - gcc
+
+- name: Clone PowerDNS-Admin
+  git:
+    repo: "https://github.com/ngoduykhanh/PowerDNS-Admin"
+    dest: "/opt/PowerDNS-Admin"
+
+- name: Fix priviles
+  file:
+    path: "/opt/PowerDNS-Admin"
+    owner: "www-data"
+    group: "www-data"
+    state: directory
+
+- name: Install virtualenv with python2.7
+  pip:
+    name: 'env'
+    virtualenv: "/opt/PowerDNS-Admin/env"
+    virtualenv_python: "python2.7"
+
+- name: Install python requirements
+  pip:
+    requirements: "/opt/PowerDNS-Admin/requirements.txt"
+    virtualenv: "/opt/PowerDNS-Admin/env"
+
+- name: Install MySQL-python
+  pip:
+    name: MySQL-python
+    virtualenv: "/opt/PowerDNS-Admin/env"
+
+- name: Make config.py
+  template:
+    src: "config.py.j2"
+    dest: "/opt/PowerDNS-Admin/config.py"
+
+- name: Define db_repository
+  stat:
+    path: "/opt/PowerDNS-Admin/db_repository"
+  register: db_repository
+  when: mysql_replication_role == 'master'
+
+- name: Create PowerDNS-Admin database
+  command: /opt/PowerDNS-Admin/env/bin/python /opt/PowerDNS-Admin/create_db.py
+  args:
+    chdir: "/opt/PowerDNS-Admin/"
+  when: mysql_replication_role == 'master' and db_repository.stat.isdir is not defined
+
+- name: Copy user.sql
+  copy:
+    src: "user.sql"
+    dest: "/tmp"
+  when: mysql_replication_role == 'master' and db_repository.stat.isdir is not defined
+
+- name: Import user.sql
+  mysql_db:
+    name: "{{ pdns_admin_db_name }}"
+    state: import
+    target: "/tmp/user.sql"
+  when: mysql_replication_role == 'master' and db_repository.stat.isdir is not defined
+
+- name: Copy PowerDNS sql schem
+  copy:
+    src: "schema.mysql.sql"
+    dest: "/tmp"
+  when: mysql_replication_role == 'master' and db_repository.stat.isdir is not defined
+
+- name: Import PowerDNS database from sql schem
+  mysql_db:
+    name: "{{ pdns_db_name }}"
+    state: import
+    target: "/tmp/schema.mysql.sql"
+  when: mysql_replication_role == 'master' and db_repository.stat.isdir is not defined
+
+- name: Install gunicorn
+  pip:
+    name: gunicorn
+    virtualenv: "/opt/PowerDNS-Admin/env"
+
+- name: Create systemd service for gunicorn app
+  template:
+    src: gunicorn.service.js2
+    dest: "/etc/systemd/system/pdnsadmin.service"
+
+- name: Enable gunicorn
+  service:
+    name: "pdnsadmin"
+    state: restarted
+    enabled: yes
+
+
+
+
